@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>活動報告フォーム</title>
+    <style>
+      body { font-family: sans-serif; margin: 20px; background: #f4f6f9; color: #333; }
+      .container { max-width: 700px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin: 0 auto; }
+      h2 { border-bottom: 2px solid #1a73e8; padding-bottom: 10px; color: #1a73e8; }
+      .form-group { margin-bottom: 20px; }
+      label { display: block; margin-bottom: 8px; font-weight: bold; }
+      input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+      button { background: #1a73e8; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; }
+      button:hover { background: #1557b0; }
+      .branch-block { display: none; background: #f8f9fa; padding: 20px; border-left: 4px solid #1a73e8; margin-bottom: 20px; border-radius: 0 4px 4px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>活動報告フォーム (GitHub Pages版)</h2>
+      <form id="reportForm" onsubmit="handleFormSubmit(this); return false;">
+        
+        <div class="form-group">
+          <label>No.1 報告者氏名</label>
+          <input type="text" name="q1_name" required>
+        </div>
+        <div class="form-group">
+          <label>No.2 活動日</label>
+          <input type="date" name="q2_date" required>
+        </div>
+
+        <div class="form-group">
+          <label>No.6 活動種別</label>
+          <select name="q6_type" id="q6_type" onchange="switchQuestions()" required>
+            <option value="">選択してください</option>
+            <option value="訪問">顧客訪問</option>
+            <option value="デスクワーク">デスクワーク</option>
+          </select>
+        </div>
+
+        <div id="block_visit" class="branch-block">
+          <h3>▼ 顧客訪問に関する詳細報告</h3>
+          <div class="form-group">
+            <label>No.7 訪問先企業名</label>
+            <input type="text" name="q7_company">
+          </div>
+          <div class="form-group">
+            <label>No.8 面談者役職・氏名</label>
+            <input type="text" name="q8_person">
+          </div>
+          <div class="form-group">
+            <label>No.9 商談内容</label>
+            <textarea name="q9_content" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div id="block_deskwork" class="branch-block">
+          <h3>▼ デスクワークに関する詳細報告</h3>
+          <div class="form-group">
+            <label>No.10 作業内容</label>
+            <input type="text" name="q10_task">
+          </div>
+          <div class="form-group">
+            <label>No.11 成果物ファイル名</label>
+            <input type="text" name="q11_output">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>No.60 本日の所感・次回アクション</label>
+          <textarea name="q60_comment" rows="4" required></textarea>
+        </div>
+
+        <button type="submit" id="submitBtn">報告を送信する</button>
+      </form>
+      <div id="output" style="margin-top:20px; font-weight:bold; color:green; text-align:center;"></div>
+    </div>
+
+    <script>
+      // 置き換えるGASのWebアプリURL
+      const GAS_URL = "★ここにGASで発行されたWebアプリのURLを貼り付ける★";
+
+      function switchQuestions() {
+        const selectedType = document.getElementById('q6_type').value;
+        const blocks = {
+          '訪問': { id: 'block_visit', inputs: ['q7_company', 'q8_person'] },
+          'デスクワーク': { id: 'block_deskwork', inputs: ['q10_task'] }
+        };
+
+        for (let key in blocks) {
+          document.getElementById(blocks[key].id).style.display = 'none';
+          blocks[key].inputs.forEach(name => {
+            const el = document.querySelector(`[name="${name}"]`);
+            if(el) el.required = false;
+          });
+        }
+
+        if (blocks[selectedType]) {
+          document.getElementById(blocks[selectedType].id).style.display = 'block';
+          blocks[selectedType].inputs.forEach(name => {
+            const el = document.querySelector(`[name="${name}"]`);
+            if(el) el.required = true;
+          });
+        }
+      }
+
+      // GitHub PagesからGASへデータを送信する処理
+      async function handleFormSubmit(form) {
+        const submitBtn = document.getElementById('submitBtn');
+        const outputDiv = document.getElementById('output');
+        
+        submitBtn.disabled = true;
+        outputDiv.style.color = "orange";
+        outputDiv.innerHTML = "送信中...";
+
+        // フォーム内のデータを連想配列（JSON）に変換
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((value, key) => { data[key] = value; });
+
+        try {
+          // GASのURLに対してPOSTリクエストを送信
+          const response = await fetch(GAS_URL, {
+            method: "POST",
+            mode: "no-cors", // ドメインをまたぐ通信のための設定
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+
+          // mode: 'no-cors' の場合、レスポンスの中身は読めませんが送信は成功します
+          outputDiv.style.color = "green";
+          outputDiv.innerHTML = "報告の送信が完了しました！";
+          form.reset();
+          switchQuestions();
+        } catch (error) {
+          outputDiv.style.color = "red";
+          outputDiv.innerHTML = "エラーが発生しました: " + error.message;
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
+    </script>
+  </body>
+</html>
